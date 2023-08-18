@@ -6,4 +6,7 @@ output: html_document
 ---
 
 ## NCLDV candidates: 
-[1. bin001](bin001_homology.html)
+[1. Bin001](bin001_homology.html)
+
+## Top 50 BLASTp Homology Matches
+[1. Bin001](bin001_topfiftyhits2.txt)
