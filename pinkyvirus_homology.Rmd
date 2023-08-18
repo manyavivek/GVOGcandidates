@@ -1,0 +1,420 @@
+---
+title: "Pinkyvirus Homology Analysis"
+author: "Manya Vivek"
+date: "2023-08-18"
+output: html_document
+---
+
+## Loading libraries 
+```{r}
+library(RColorBrewer)
+library(ggplot2)
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(data.table)
+library(tidyverse)
+library(stringr)
+library(dplyr)
+library(formattable)
+library(plotly)
+library(readr)
+```
+
+```{r}
+pinky <- read_csv("pinkyblastp_top50.txt", 
+                  col_names = c("qseqid", "sseqid", "evalue", "staxids", "sscinames", "sskingdoms", "stitle")) 
+pinky
+```
+## Filtering e-values with hits lower than 1e-10 
+```{r}
+pinky_evalue <- pinky %>% 
+  filter(as.numeric(evalue) <= 1e-10)
+pinky_evalue
+```
+
+```{r}
+pinky_duplicates <- pinky_evalue %>% 
+  group_by(qseqid) %>% 
+  distinct(sseqid, .keep_all = TRUE)
+print(pinky_duplicates)
+```
+## Renaming qseqids the product names produced on Prokka and hallmark proteins
+```{r}
+library(dplyr)
+rename_values <- c(
+  "NODE_2150_length_28922_cov_4.964458_8" = "A32", 
+"NODE_5244_length_16314_cov_5.483917_1" = "D5", 
+"NODE_22952_length_5851_cov_5.322809_7" = "D5",
+"NODE_795_length_49550_cov_5.527831_39" = "mRNAc",
+"NODE_2253_length_28109_cov_5.502032_7" = "PolB",
+"NODE_795_length_49550_cov_5.527831_38" = "RNAPL",
+"NODE_1151_length_41258_cov_5.297770_55" = "RNAPS", 
+"NODE_4708_length_17479_cov_5.389635_11" = "RNR",
+"NODE_936_length_45786_cov_4.756839_10" = "SFII",
+"NODE_2150_length_28922_cov_4.964458_11" = "VLTF3", 
+"NODE_795_length_49550_cov_5.527831_2" = "Polyprotein pp62", 
+"NODE_795_length_49550_cov_5.527831_20" = "DNA Ligase", 
+"NODE_795_length_49550_cov_5.527831_49" = "mRNA-decapping protein g5R",
+"NODE_936_length_45786_cov_4.756839_8" = "putative AP endonuclease",
+"NODE_936_length_45786_cov_4.756839_17" = "Thymidylate synthase", 
+"NODE_1151_length_41258_cov_5.297770_33" = "Deoxyuridine 5'-triphosphate nucleotidohydrolase"
+)
+# Replacing values in the 'qseqid' column in 'data_evalue' dataframe
+pinky_duplicates$qseqid <- ifelse(pinky_duplicates$qseqid %in% names(rename_values), rename_values[pinky_duplicates$qseqid], pinky_duplicates$qseqid)
+```
+
+```{r}
+pinky_kingdom <- pinky_evalue %>% 
+  count(sskingdoms)
+pinky_kingdom
+```
+```{r}
+piechart_pinky <- ggplot(pinky_kingdom, aes(x="", y=n, fill=sskingdoms)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  scale_fill_brewer(palette = "PiYG") +
+   theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank())
+piechart_pinky
+```
+
+```{r}
+pinky_eukaryotes <- pinky_duplicates %>%
+  filter(sskingdoms == "Eukaryota") %>%
+  group_by(qseqid, sseqid, staxids) %>%
+  slice_min(order_by = evalue) %>%
+  ungroup() %>% 
+  mutate(genus = word(sscinames, 1))
+pinky_eukaryotes
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+pinky_egenus_counts <- pinky_eukaryotes %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 1) # Only include those with more than one count 
+print(pinky_egenus_counts)
+```
+```{r}
+distinct_colors <- c("skyblue1", "#E6F5D0", "#B8E186", "#7FBC41", "#4D9221", "#276419", "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928", "#FBB4AE", "#B3CDE3", "#CCEBC5", "#DECBE4", "#FED9A6", "midnightblue", "#E5D8BD", "cornflowerblue", "#8DD3C7", "royalblue", "#BEBADA", "#FB8072", "#80B1D3", "#FDB462", "#B3DE69", "darkcyan", "#D9D9D9", "#BC80BD", "#CCEBC5", "chartreuse2", "#7FC97F", "#BEAED4", "purple", "cadetblue", "#386CB0", "#F0027F", "#BF5B17", "#666666", "#8E0152", "#C51B7D", "#DE77AE", "#F1B6DA", "#FDE0EF", "lightpink", "lightgreen", "mediumpurple1", "lightgoldenrod2", "lavender", "lavenderblush1", "lightblue2", "lightcyan1", "lemonchiffon2", "lawngreen", "khaki3", "ivory2", "indianred2", "hotpink2", "honeydew2", "mistyrose1", "midnightblue", "mediumvioletred", "mediumslateblue", "mediumpurple3", "mediumorchid1", "maroon2", "maroon", "limegreen", "lightsteelblue", "lightskyblue", "lightseagreen", "lightsalmon", "lightpink2", "pink", "peachpuff", "palevioletred1", "paleturquoise", "palegreen", "orchid1", "orange1", "olivedrab1", "purple2", "plum1", "steelblue1", "royalblue1", "skyblue",  "coral1", "chartreuse2", "darkgreen", "deepskyblue", "cornflowerblue", "darkcyan", "moccasin")
+```
+
+
+```{r, fig.height=10, fig.width=10}
+pinkyvirus_eukaryotes_ggplot <- ggplot(pinky_egenus_counts, aes(x = qseqid, y = count, fill = genus)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  scale_fill_manual(values = distinct_colors) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+pinkyvirus_eukaryotes_ggplot
+```
+```{r}
+ggplotly(pinkyvirus_eukaryotes_ggplot)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+eukaryotes_pinkyggplot <- ggplot(pinky_egenus_counts, aes(x = genus, y = count)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  theme_minimal() +
+  theme(text = element_text(size = 12), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+eukaryotes_pinkyggplot
+```
+
+
+
+## Rhizophagus - Homology due to Horizontal Gene Transfer? 
+
+```{r}
+rhizophagus_pinky <- pinky_eukaryotes %>% 
+  filter(genus == "Rhizophagus")
+rhizophagus_pinky
+```
+```{r}
+rhizophagus_pinky$sseqid
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+rhizophagus_counts_pinky <- rhizophagus_pinky %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 1) # Only include those with more than one count 
+print(rhizophagus_counts_pinky)
+```
+```{r}
+dc <- c("#DE77AE")
+```
+
+```{r, fig.height=10, fig.width=10}
+rhizophagus_ggplot <- ggplot(rhizophagus_counts_pinky, aes(x = qseqid, y = count, fill = genus)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  scale_fill_manual(values = dc) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+rhizophagus_ggplot
+```
+```{r}
+library(rentrez)
+# Function to retrieve BioSample accession for a given protein accession
+get_biosample_accession <- function(rhizophagusPinky_accessions) {
+  entrez_query <- paste0(rhizophagusPinky_accessions, "[ACCN]")
+  entrez_result <- entrez_fetch(db = "protein", id = entrez_query, rettype = "gb", retmode = "text")
+  biosample_accession <- regmatches(entrez_result, regexpr("BioSample: (\\w+)", entrez_result))
+  return(biosample_accession)
+}
+# Example protein accession numbers
+rhizophagusPinky_accessions <- c(
+    "dbj|GBC12205.2|", "dbj|GBC13564.1|", "dbj|GBC21622.1|", "dbj|GBC31224.2|", "dbj|GBC35452.2|",
+    "dbj|GBC39224.2|", "dbj|GBC47585.1|", "dbj|GET50588.1|", "dbj|GET50592.1|", "dbj|GET50593.1|",
+    "dbj|GET51853.1|", "dbj|GET51855.1|", "dbj|GET51856.1|", "dbj|GET51873.1|", "dbj|GET51875.1|",
+    "dbj|GET51876.1|", "dbj|GET52808.1|", "dbj|GET54086.1|", "dbj|GET54089.1|", "dbj|GET54174.1|",
+    "dbj|GET56822.1|", "dbj|GET56825.1|", "dbj|GET56826.1|", "dbj|GET57267.1|", "dbj|GET57268.1|",
+    "dbj|GET57269.1|", "dbj|GET57381.1|", "dbj|GET57383.1|", "dbj|GET63053.1|", "dbj|GET66458.1|",
+    "dbj|GET66459.1|", "dbj|GET67080.1|", "dbj|GET67081.1|", "dbj|GET67083.1|", "dbj|GET67084.1|",
+    "dbj|GET67086.1|", "dbj|GET67348.1|", "dbj|GET67349.1|", "emb|CAB4403144.1|", "emb|CAB4418995.1|",
+    "emb|CAB4443500.1|", "emb|CAB4446634.1|", "emb|CAB4479734.1|", "gb|EXX63233.1|", "gb|PKY27577.1|",
+    "dbj|GBC36622.2|", "emb|CAB5185030.1|", "gb|EXX73414.1|", "gb|PKC09441.1|", "gb|PKY22961.1|",
+    "ref|XP_025173077.1|", "emb|CAB5357217.1|", "emb|CAG8693468.1|", "emb|CAG8734086.1|", "gb|UZO10893.1|",
+    "ref|XP_025164841.1|", "dbj|GBB89267.1|", "dbj|GES93775.1|", "dbj|GBB95954.1|", "dbj|GBC22393.2|",
+    "dbj|GES89815.1|", "dbj|GES94728.1|", "dbj|GES96473.1|", "dbj|GES96599.1|", "emb|CAB4402555.1|",
+    "emb|CAB4403248.1|", "emb|CAB4474595.1|", "emb|CAB4476463.1|", "emb|CAB4480535.1|", "emb|CAB4492557.1|",
+    "emb|CAB5186435.1|", "emb|CAB5205225.1|", "emb|CAB5208415.1|", "emb|CAG8744073.1|", "gb|PKB96922.1|",
+    "gb|PKC08263.1|", "gb|PKC54175.1|", "gb|PKC57870.1|", "gb|PKK58991.1|", "gb|PKK60440.1|", "gb|PKK63436.1|",
+    "gb|RGB22550.1|", "ref|XP_025181784.1|", "emb|CAB5212864.1|", "emb|CAB5383446.1|", "gb|EXX55117.1|",
+    "gb|UZO20410.1|", "ref|XP_025171547.1|", "emb|CAB4481493.1|", "gb|PKC17413.1|", "gb|PKC65499.1|", "gb|PKY14747.1|"
+)
+
+
+# Retrieve the BioSample accession for the given protein accessions
+biosample_accessions <- sapply(rhizophagusPinky_accessions, get_biosample_accession)
+
+# Print the result
+print(biosample_accessions)
+```
+```{r}
+# Retrieve the BioSample accessions for the sseqid column
+rhizophagus_pinky$biosample_accession <- sapply(rhizophagus_pinky$sseqid, get_biosample_accession)
+
+# Print the updated data
+print(rhizophagus_pinky)
+```
+
+```{r}
+# Removing repeated Biosample IDs. 
+rhizophagus_biosample <- rhizophagus_pinky %>% 
+  group_by(qseqid) %>% 
+  distinct(biosample_accession, .keep_all = TRUE)
+rhizophagus_biosample
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+rhizophagus_biosample_count <- rhizophagus_biosample %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 1) # Only include those with more than one count 
+print(rhizophagus_biosample_count)
+```
+
+```{r, fig.height=10, fig.width=10}
+rhizophagus_biosample_ggplot <- ggplot(rhizophagus_biosample_count, aes(x = qseqid, y = count, fill = genus)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  scale_fill_manual(values = dc) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+rhizophagus_biosample_ggplot
+```
+
+## Phytophthora - Homology due to Horizontal Gene Transfer? 
+
+```{r}
+phytophthora_pinky <- pinky_eukaryotes %>% 
+  filter(genus == "Phytophthora")
+phytophthora_pinky
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+phytophthora_pinkycounts <- phytophthora_pinky %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 1) # Only include those with more than one count 
+print(phytophthora_pinkycounts)
+```
+
+```{r}
+pc <- c("#7FBC41")
+```
+
+
+```{r, fig.height=10, fig.width=10}
+phytophthora_pinky_ggplot <- ggplot(phytophthora_pinkycounts, aes(x = qseqid, y = count, fill = genus)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  scale_fill_manual(values = pc) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+phytophthora_pinky_ggplot
+```
+
+```{r}
+phytophthora_pinky$sseqid
+```
+
+```{r}
+library(rentrez)
+
+# Function to retrieve BioSample accession for a given protein accession
+get_biosample_accession_phytophthora <- function(phytophthoraPinky_accessions) {
+  if (startsWith(phytophthoraPinky_accessions, "ref")) {
+    return(phytophthoraPinky_accessions)  # Return the protein accession directly
+  } else {
+    entrez_query <- paste0(phytophthoraPinky_accessions, "[ACCN]")
+    entrez_result <- entrez_fetch(db = "protein", id = entrez_query, rettype = "gb", retmode = "text")
+    biosample_accession_phytophthora <- regmatches(entrez_result, regexpr("BioSample: (\\w+)", entrez_result))
+    return(biosample_accession_phytophthora)
+}}
+# Example protein accession numbers
+phytophthoraPinky_accessions <- c(
+   "gb|KAG6947535.1|", "gb|KAH7468958.1|", "gb|KAH7499174.1|", "gb|KAG7394170.1|", "gb|ETI39689.1|",     
+"gb|ETO68404.1|", "gb|ETP37615.1|", "gb|KUG01557.1|", "ref|XP_008910449.1|", "gb|KAG7375702.1|", "gb|KAF1783475.1|", "gb|ETL77478.1|", "gb|ETP35848.1|", "gb|KAG1705391.1|", "gb|KAG7388034.1|", "gb|KAG7391651.1|", "gb|KAH7470505.1|", "gb|OWZ13752.1|", "dbj|GMF32380.1|", "gb|ETI47070.1|", "gb|ETK86998.1|", "gb|ETL40412.1|", "gb|ETL93566.1|", "gb|KAE8887753.1|", "gb|KAE8946961.1|", "gb|KAE8988664.1|", "gb|KAE8991089.1|", "gb|KAF1781219.1|", "gb|KAF4045723.1|", "gb|KAG1686864.1|", "gb|KAG1692341.1|", "gb|KAG2776868.1|", "gb|KAG3023315.1|", "gb|KAG3114356.1|", "gb|KAG6604511.1|",   
+"gb|KAG6972529.1|", "gb|KAG7391747.1|", "gb|KAG7400365.1|", "gb|KUF97494.1|", "gb|OWZ19253.1|", "gb|POM60565.1|",      "ref|XP_002904741.1|", "ref|XP_008905518.1|", "ref|XP_009520697.1|", "gb|KAG2967876.1|", "gb|KAG3088486.1|", "gb|KAG6961386.1|",    "gb|ETL86515.1|", "gb|ETP37612.1|", "ref|XP_008910456.1|", "gb|ETL86504.1|", "gb|KAF1785852.1|", "gb|KAG2759394.1|", "gb|ETO68411.1|",   "gb|ETP37619.1|", "gb|KAG2980116.1|", "gb|KAG3045077.1|"   
+)
+
+# Retrieve the BioSample accession for the given protein accessions
+biosample_accessions_phytophthora <- sapply(phytophthoraPinky_accessions, get_biosample_accession_phytophthora)
+
+# Print the result
+print(biosample_accessions_phytophthora)
+```
+
+```{r}
+# Retrieve the BioSample accessions for the sseqid column
+phytophthora_pinky$biosample_accession_phytophthora <- sapply(phytophthora_pinky$sseqid, get_biosample_accession_phytophthora)
+
+# Print the updated data
+print(phytophthora_pinky)
+```
+
+
+```{r}
+# Removing repeated Biosample IDs. 
+phytophthora_pinky_biosample <- phytophthora_pinky %>% 
+  group_by(qseqid) %>% 
+  distinct(biosample_accession_phytophthora, .keep_all = TRUE)
+phytophthora_pinky_biosample
+```
+
+```{r}
+# List of protein accession numbers
+phytophthora_accessions <- c("gb|KAG6947535.1|", "gb|KAH7468958.1|", "gb|KAH7499174.1|", "gb|KAG7394170.1|", "gb|ETI39689.1|",     
+"gb|ETO68404.1|", "gb|ETP37615.1|", "gb|KUG01557.1|", "ref|XP_008910449.1|", "gb|KAG7375702.1|", "gb|KAF1783475.1|", "gb|ETL77478.1|", "gb|ETP35848.1|", "gb|KAG1705391.1|", "gb|KAG7388034.1|", "gb|KAG7391651.1|", "gb|KAH7470505.1|", "gb|OWZ13752.1|", "dbj|GMF32380.1|", "gb|ETI47070.1|", "gb|ETK86998.1|", "gb|ETL40412.1|", "gb|ETL93566.1|", "gb|KAE8887753.1|", "gb|KAE8946961.1|", "gb|KAE8988664.1|", "gb|KAE8991089.1|", "gb|KAF1781219.1|", "gb|KAF4045723.1|", "gb|KAG1686864.1|", "gb|KAG1692341.1|", "gb|KAG2776868.1|", "gb|KAG3023315.1|", "gb|KAG3114356.1|", "gb|KAG6604511.1|",   
+"gb|KAG6972529.1|", "gb|KAG7391747.1|", "gb|KAG7400365.1|", "gb|KUF97494.1|", "gb|OWZ19253.1|", "gb|POM60565.1|",      "ref|XP_002904741.1|", "ref|XP_008905518.1|", "ref|XP_009520697.1|", "gb|KAG2967876.1|", "gb|KAG3088486.1|", "gb|KAG6961386.1|",    "gb|ETL86515.1|", "gb|ETP37612.1|", "ref|XP_008910456.1|", "gb|ETL86504.1|", "gb|KAF1785852.1|", "gb|KAG2759394.1|", "gb|ETO68411.1|",   "gb|ETP37619.1|", "gb|KAG2980116.1|", "gb|KAG3045077.1|")
+
+# Retrieve protein sequences using NCBI Entrez
+
+# Write protein sequences to a FASTA file
+writeLines(phytophthora_accessions, "protein_sequences.faa")
+```
+
+```{r}
+library(rentrez)
+
+# List of protein accession numbers
+protein_accessions <- c("gb|KAG6947535.1|", "gb|KAH7468958.1|", "gb|KAH7499174.1|", "gb|KAG7394170.1|", "gb|ETI39689.1|",     
+"gb|ETO68404.1|", "gb|ETP37615.1|", "gb|KUG01557.1|", "ref|XP_008910449.1|", "gb|KAG7375702.1|", "gb|KAF1783475.1|", "gb|ETL77478.1|", "gb|ETP35848.1|", "gb|KAG1705391.1|", "gb|KAG7388034.1|", "gb|KAG7391651.1|", "gb|KAH7470505.1|", "gb|OWZ13752.1|", "dbj|GMF32380.1|", "gb|ETI47070.1|", "gb|ETK86998.1|", "gb|ETL40412.1|", "gb|ETL93566.1|", "gb|KAE8887753.1|", "gb|KAE8946961.1|", "gb|KAE8988664.1|", "gb|KAE8991089.1|", "gb|KAF1781219.1|", "gb|KAF4045723.1|", "gb|KAG1686864.1|", "gb|KAG1692341.1|", "gb|KAG2776868.1|", "gb|KAG3023315.1|", "gb|KAG3114356.1|", "gb|KAG6604511.1|",   
+"gb|KAG6972529.1|", "gb|KAG7391747.1|", "gb|KAG7400365.1|", "gb|KUF97494.1|", "gb|OWZ19253.1|", "gb|POM60565.1|",      "ref|XP_002904741.1|", "ref|XP_008905518.1|", "ref|XP_009520697.1|", "gb|KAG2967876.1|", "gb|KAG3088486.1|", "gb|KAG6961386.1|",    "gb|ETL86515.1|", "gb|ETP37612.1|", "ref|XP_008910456.1|", "gb|ETL86504.1|", "gb|KAF1785852.1|", "gb|KAG2759394.1|", "gb|ETO68411.1|",   "gb|ETP37619.1|", "gb|KAG2980116.1|", "gb|KAG3045077.1|")
+
+# Retrieve protein sequences using NCBI Entrez
+protein_sequences <- entrez_fetch(
+  db = "protein",
+  id = protein_accessions,
+  rettype = "fasta_cds_aa",  # Use "fasta_cds_aa" to get protein sequences
+  retmode = "text"
+)
+
+# Write protein sequences to a .faa file
+output_file <- "protein_sequences.faa"
+writeLines(protein_sequences, output_file)
+
+# Print a message indicating successful writing
+cat("Protein sequences have been written to", output_file, "\n")
+```
+
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+phytophthora_biosample_count <- phytophthora_pinky_biosample %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep")  
+print(phytophthora_biosample_count)
+```
+
+```{r, fig.height=10, fig.width=10}
+phytophthora_biosample_ggplot <- ggplot(phytophthora_biosample_count, aes(x = qseqid, y = count, fill = genus)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  scale_fill_manual(values = pc) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+phytophthora_biosample_ggplot
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+phytophthora_biosample_repeats <- phytophthora_pinky_biosample %>%
+  group_by(biosample_accession_phytophthora) %>%
+  summarise(count = n(), .groups = "keep")  
+print(phytophthora_biosample_repeats)
+```
+
+```{r, fig.height=10, fig.width=10}
+phytophthora_repeated <- ggplot(phytophthora_biosample_repeats, aes(x = biosample_accession_phytophthora, y = count)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  scale_fill_manual(values = pc) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+phytophthora_repeated
+```
+
+
+
+## Bacteria HGT
+
+```{r}
+pinky_bacteria <- pinky_duplicates %>% 
+  filter(sskingdoms == "Bacteria") %>% 
+   group_by(qseqid, sseqid, staxids) %>%
+  slice_min(order_by = evalue) %>%
+  ungroup() %>% 
+  mutate(genus = word(sscinames, 1))
+pinky_bacteria
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+pinky_bacteria_counts <- pinky_bacteria %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 2) # Only include those with more than one count 
+print(pinky_bacteria_counts)
+```
+
+```{r, fig.height=10, fig.width=10}
+pinky_bacteria_ggplot <- ggplot(pinky_bacteria_counts, aes(x = genus, y = count)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  scale_fill_manual(values = pc) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+pinky_bacteria_ggplot
+```
