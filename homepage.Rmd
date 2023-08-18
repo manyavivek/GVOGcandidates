@@ -1,0 +1,9 @@
+---
+title: "Exploring and Analyzing NCLDV candidates"
+author: "Manya Vivek"
+date: "2023-08-18"
+output: html_document
+---
+
+## NCLDV candidates: 
+[1. bin001](bin001_homology.html)
