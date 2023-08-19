@@ -9,7 +9,11 @@ output: html_document
 [Pinkyvirus](pinkyvirus_homology.html)
 
 ## NCLDV candidates: 
-[1. Bin001](bin001_homology.html)
+[1. Bin001](bin001_ProteinBlastDataAnalysis.html)
+
+[2. Bin062](bin062_ProteinBlastDataAnalysis.html)
 
 ## Top 50 BLASTp Homology Matches
 [1. Bin001](bin001_topfiftyhits2.txt)
+
+[2. Bin062](bin062_topfiftyhits.txt)

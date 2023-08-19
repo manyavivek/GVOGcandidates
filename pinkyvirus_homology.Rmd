@@ -386,8 +386,6 @@ phytophthora_repeated <- ggplot(phytophthora_biosample_repeats, aes(x = biosampl
 phytophthora_repeated
 ```
 
-
-
 ## Bacteria HGT
 
 ```{r}

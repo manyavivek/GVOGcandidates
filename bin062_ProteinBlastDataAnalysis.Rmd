@@ -105,3 +105,42 @@ bin062_eukaryotes_ggplot
 ```{r}
 ggplotly(bin062_eukaryotes_ggplot)
 ```
+
+## Bacteria HGT
+
+```{r}
+bin062_bacteria <- bin062_rmduplicates %>% 
+  filter(sskingdoms == "Bacteria") %>% 
+   group_by(qseqid, sseqid, staxids) %>%
+  slice_min(order_by = evalue) %>%
+  ungroup() %>% 
+  mutate(genus = word(sscinames, 1))
+bin062_bacteria
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+bin062_bacteria_counts <- bin062_bacteria %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 2) # Only include those with more than one count 
+print(bin062_bacteria_counts)
+```
+
+```{r, fig.height=10, fig.width=10}
+bin062_bacteria_ggplot <- ggplot(bin062_bacteria_counts, aes(x = genus, y = count)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  theme_minimal() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+bin062_bacteria_ggplot
+```
+
+## Viruses
+
+```{r}
+bin062_viruses <- bin062_rmduplicates %>% 
+  filter(sskingdoms == "Viruses")
+bin062_viruses
+```
+
