@@ -15,6 +15,9 @@ output: html_document
 
 [4. Bin148 {Maybe in the Asfarviridae family}](bin148_ProteinBlastDataAnalysis.html)
 
+## Analyzing Results 
+[4. Bin148](bin148_AnalyzingData.html)
+
 ## Top 50 BLASTp Homology Matches
 [1. Bin001](bin001_topfiftyhits2.txt)
 

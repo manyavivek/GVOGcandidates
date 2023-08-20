@@ -41,7 +41,7 @@ bin148_kingdomcount
 piechart_bin148 <- ggplot(bin148_kingdomcount, aes(x="", y=n, fill=sskingdoms)) +
   geom_bar(stat="identity", width=1) +
   coord_polar("y", start=0) +
-  scale_fill_brewer(palette = "PiYG") +
+  scale_fill_brewer(palette = "RdPu") +
    theme(axis.text = element_blank(),
         axis.ticks = element_blank(),
         panel.grid  = element_blank())
@@ -79,9 +79,6 @@ bin148_egenus_counts_3 <- bin148_eukaryotes %>%
   filter(count > 1) # Only include those with more than one count 
 print(bin148_egenus_counts_3)
 ```
-```{r}
-
-```
 
 
 ```{r}
@@ -89,12 +86,12 @@ distinct_colors <- c("skyblue1", "#E6F5D0", "#B8E186", "#7FBC41", "#4D9221", "#2
 ```
 
 ```{r, fig.height=10, fig.width=20}
-bin148_eukaryotes_ggplot <- ggplot(bin148_egenus_counts_3, aes(x = genus, y = count)) +
+bin148_eukaryotes_ggplot_genusFreq <- ggplot(bin148_egenus_counts_3, aes(x = genus, y = count)) +
   geom_bar(stat = "identity", width = 0.7, position = "stack") +
   scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
   theme_minimal() +
-  theme(text = element_text(size = 12), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
-bin148_eukaryotes_ggplot
+  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+bin148_eukaryotes_ggplot_genusFreq
 ```
 
 ```{r, fig.height=10, fig.width=20}
@@ -106,7 +103,29 @@ bin148_eukaryotes_ggplot <- ggplot(bin148_egenus_counts_3, aes(x = qseqid, y = c
   theme(text = element_text(size = 25), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
 bin148_eukaryotes_ggplot
 ```
+#### Using ggsave to save .png formats of ggplots. 
+ggsave("bin148_genusFreq_qseqid.png", plot = bin148_eukaryotes_ggplot, width = 20, height = 10)
 
 ```{r}
 ggplotly(bin148_eukaryotes_ggplot)
 ```
+
+## Viruses
+
+```{r}
+library(DT)
+```
+
+
+```{r}
+bin148_viruses <- bin148_rmduplicates %>% 
+  filter(sskingdoms == "Viruses")
+bin148_viruses
+```
+
+```{r}
+datatable(bin148_viruses)
+```
+
+
+

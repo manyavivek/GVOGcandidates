@@ -1,0 +1,83 @@
+---
+title: "Bin148 - Analyzing Data"
+author: "Manya Vivek"
+date: "2023-08-20"
+output: html_document
+---
+
+```{r, echo=FALSE}
+library(htmltools)
+library(DT)
+library(data.table)
+```
+
+```{r, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+library(RColorBrewer)
+library(ggplot2)
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(data.table)
+library(tidyverse)
+library(stringr)
+library(dplyr)
+library(formattable)
+library(plotly)
+library(readr)
+library(htmltools)
+library(htmlwidgets)
+```
+
+```{r, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+bin148 <- read_csv("bin148_topfiftyhits.txt", 
+                   col_names = c("qseqid", "sseqid", "evalue", "staxids", "sscinames", "sskingdoms", "stitle"))
+```
+```{r, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+bin148_eval <- bin148 %>% 
+  filter(as.numeric(evalue) <= 1e-10)
+```
+
+```{r, echo=FALSE}
+bin148_rmduplicates <- bin148_eval %>% 
+  group_by(qseqid) %>% 
+  distinct(sseqid, .keep_all = TRUE)
+```
+
+
+#### Figure 1: Pie Chart Summarizing the Homology Match Counts Across Four Domains
+
+```{r, echo=FALSE}
+# Generate HTML code for embedding the PNG image
+pie_html <- tags$img(src = "bin148_domainpiechart.png", alt = "Pie Chart Summarizing the Homology Match Counts Across Four Domains")
+pie_html
+```
+
+
+#### Figure 2: Genus Frequency
+  Tallying the overall occurrences of the genus within the top 50 hits of BLASTp (Protein BLAST) results for bin148. bin148 has the highest number of homology matches to Rhizophagus followed by Rotaria. 
+  
+```{r, echo=FALSE}
+# Generate HTML code for embedding the PNG image
+image_html <- tags$img(src = "bin148_genusFreq.png", alt = "bin148 - Genus Frequency")
+image_html
+```
+
+
+
+
+
+#### Figure 3: Genus frequency for the different protein sequences in Bin148
+   From this bar plot the dispersion of the different genera can be assessed across various protein sequences. Genus Rhizophagus is highly dispersed in comparision to the other genera. Figures 2 and 3 demonstrate that the genus Rhizophagus has the highest hit count, with these hits being widely distributed across different contigs, implying substantial homology.
+```{r, echo=FALSE}
+qseqid_html <- tags$img(src = "bin148_genusFreq_qseqid.png", alt = "Genus frequency for the different protein sequences (contigs) of bin148")
+qseqid_html
+```
+
+
+#### Table 1: Displaying all the viruses that exhibited homology matches with bin148.
+
+```{r,echo=FALSE}
+bin148_viruses <- bin148_rmduplicates %>% 
+  filter(sskingdoms == "Viruses")
+datatable(bin148_viruses)
+```
