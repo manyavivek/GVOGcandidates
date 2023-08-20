@@ -1,0 +1,112 @@
+---
+title: "bin148 BLASTp Data analysis and visualization"
+author: "Manya Vivek"
+date: "2023-08-20"
+output: html_document
+---
+
+## Loading Library 
+```{r}
+library(RColorBrewer)
+library(ggplot2)
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(data.table)
+library(tidyverse)
+library(stringr)
+library(dplyr)
+library(formattable)
+library(plotly)
+library(readr)
+library(htmltools)
+library(htmlwidgets)
+```
+
+```{r}
+bin148 <- read_csv("bin148_topfiftyhits.txt", 
+                   col_names = c("qseqid", "sseqid", "evalue", "staxids", "sscinames", "sskingdoms", "stitle"))
+```
+```{r}
+bin148_eval <- bin148 %>% 
+  filter(as.numeric(evalue) <= 1e-10)
+```
+
+```{r}
+bin148_kingdomcount <- bin148_eval %>% 
+  count(sskingdoms)
+bin148_kingdomcount
+```
+```{r}
+piechart_bin148 <- ggplot(bin148_kingdomcount, aes(x="", y=n, fill=sskingdoms)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  scale_fill_brewer(palette = "PiYG") +
+   theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank())
+piechart_bin148
+```
+```{r}
+bin148_rmduplicates <- bin148_eval %>% 
+  group_by(qseqid) %>% 
+  distinct(sseqid, .keep_all = TRUE)
+```
+
+```{r}
+bin148_eukaryotes <- bin148_rmduplicates %>%
+  filter(sskingdoms == "Eukaryota") %>%
+  group_by(qseqid, sseqid, staxids) %>%
+  slice_min(order_by = evalue) %>%
+  ungroup() %>% 
+  mutate(genus = word(sscinames, 1))
+bin148_eukaryotes
+```
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+bin148_egenus_counts <- bin148_eukaryotes %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 1) # Only include those with more than one count 
+print(bin148_egenus_counts)
+```
+
+```{r}
+# Count the number of times each genus appears for a specific protein sequence
+bin148_egenus_counts_3 <- bin148_eukaryotes %>%
+  group_by(qseqid, genus) %>%
+  summarise(count = n(), .groups = "keep") %>% 
+  filter(count > 1) # Only include those with more than one count 
+print(bin148_egenus_counts_3)
+```
+```{r}
+
+```
+
+
+```{r}
+distinct_colors <- c("skyblue1", "#E6F5D0", "#B8E186", "#7FBC41", "#4D9221", "#276419", "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928", "#FBB4AE", "#B3CDE3", "#CCEBC5", "#DECBE4", "#FED9A6", "midnightblue", "#E5D8BD", "cornflowerblue", "#8DD3C7", "royalblue", "#BEBADA", "#FB8072", "#80B1D3", "#FDB462", "#B3DE69", "darkcyan", "#D9D9D9", "#BC80BD", "#CCEBC5", "chartreuse2", "#7FC97F", "#BEAED4", "purple", "cadetblue", "#386CB0", "#F0027F", "#BF5B17", "#666666", "#8E0152", "#C51B7D", "#DE77AE", "#F1B6DA", "#FDE0EF", "lightpink", "lightgreen", "mediumpurple1", "lightgoldenrod2", "lavender", "lavenderblush1", "lightblue2", "lightcyan1", "lemonchiffon2", "lawngreen", "khaki3", "ivory2", "indianred2", "hotpink2", "honeydew2", "mistyrose1", "midnightblue", "mediumvioletred", "mediumslateblue", "mediumpurple3", "mediumorchid1", "maroon2", "maroon", "limegreen", "lightsteelblue", "lightskyblue", "lightseagreen", "lightsalmon", "lightpink2", "pink", "peachpuff", "palevioletred1", "paleturquoise", "palegreen", "orchid1", "orange1", "olivedrab1", "purple2", "plum1", "steelblue1", "royalblue1", "skyblue",  "coral1", "chartreuse2", "darkgreen", "deepskyblue", "cornflowerblue", "darkcyan", "moccasin", "skyblue1", "#E6F5D0", "#B8E186", "#7FBC41", "#4D9221", "#276419", "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928", "#FBB4AE", "#B3CDE3", "#CCEBC5", "#DECBE4", "#FED9A6", "midnightblue", "#E5D8BD", "cornflowerblue", "#8DD3C7", "royalblue", "#BEBADA", "#FB8072", "#80B1D3", "#FDB462", "#B3DE69", "darkcyan", "#D9D9D9", "#BC80BD", "#CCEBC5", "chartreuse2", "#7FC97F", "#BEAED4", "purple", "cadetblue", "#386CB0", "#F0027F", "#BF5B17", "#666666", "#8E0152", "#C51B7D", "#DE77AE", "#F1B6DA", "#FDE0EF", "lightpink", "lightgreen", "mediumpurple1", "lightgoldenrod2", "lavender", "lavenderblush1", "lightblue2", "lightcyan1", "lemonchiffon2", "lawngreen", "khaki3", "ivory2", "indianred2", "hotpink2", "honeydew2", "mistyrose1", "midnightblue", "mediumvioletred", "mediumslateblue", "mediumpurple3", "mediumorchid1", "maroon2", "maroon", "limegreen", "lightsteelblue", "lightskyblue", "lightseagreen", "lightsalmon", "lightpink2", "pink", "peachpuff", "palevioletred1", "paleturquoise", "palegreen", "orchid1", "orange1", "olivedrab1", "purple2", "plum1", "steelblue1", "royalblue1", "skyblue",  "coral1", "chartreuse2", "darkgreen", "deepskyblue", "cornflowerblue", "darkcyan", "moccasin")
+```
+
+```{r, fig.height=10, fig.width=20}
+bin148_eukaryotes_ggplot <- ggplot(bin148_egenus_counts_3, aes(x = genus, y = count)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  theme_minimal() +
+  theme(text = element_text(size = 12), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+bin148_eukaryotes_ggplot
+```
+
+```{r, fig.height=10, fig.width=20}
+bin148_eukaryotes_ggplot <- ggplot(bin148_egenus_counts_3, aes(x = qseqid, y = count, fill = genus)) +
+  geom_bar(stat = "identity", width = 0.7, position = "stack") +
+  scale_y_continuous(labels = function(y) str_wrap(y, width = 3)) +
+  theme_minimal() +
+  scale_fill_manual(values = distinct_colors) +
+  theme(text = element_text(size = 25), axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+bin148_eukaryotes_ggplot
+```
+
+```{r}
+ggplotly(bin148_eukaryotes_ggplot)
+```
